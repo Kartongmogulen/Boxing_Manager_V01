@@ -6,16 +6,22 @@ using UnityEngine.UI;
 public class player : MonoBehaviour
 {
     public string name;
+    public fighterState fighterStateNow;
+    public fightStyle fightStyleNow;
+
+    //Diff mellan Jab och Cross
+    public int jabLowerStaminaUse; //Lägre stamina use jämfört med Cross
 
     //HEALTH
     public int bodyHealthStart;
-    public int bodyHealthNow;
-
     public int headHealthStart;
-    public int headHealthNow;
-
     public int staminaHealthStart;
-    public int staminaHealthNow;
+    public int staminaRecoveryBetweenRounds;
+
+    //ATTACK
+    public int accuracy; //Chans att träffa
+    public int strength; //Skada
+    public int endurance; //Stamina use
 
     //ATTACK HEAD
     public int jabAccuracyHead;
@@ -25,6 +31,7 @@ public class player : MonoBehaviour
     public int crossAccuracyHead;
     public int crossStaminaUseHead;
     public int crossDamageHead;
+    public int crossKnockDownHead;
 
     //ATTACK BODY
     public int jabAccuracyBody;
@@ -36,17 +43,58 @@ public class player : MonoBehaviour
     public int crossStaminaUseBody;
     public int crossDamageBody;
     public int crossStaminaDamageBody;
+    public int crossStaminaRecoveryDamageBody;
 
     //DEFENCE
     public int guardHead;
     public int guardBody;
+
+    //Värdering som ändras
+    public int bodyHealthNow;
+    public int headHealthNow;
+    public int staminaHealthNow;
+
+    public int knockdownCounter;
+    public int damageTakenDuringRound;
 
     public void Start()
     {
         bodyHealthNow = bodyHealthStart;
         headHealthNow = headHealthStart;
         staminaHealthNow = staminaHealthStart;
-        
+
+        //Accuracy
+        jabAccuracyHead = accuracy;
+        crossAccuracyHead = accuracy;
+        jabAccuracyBody = accuracy;
+        crossAccuracyBody = accuracy;
+
+        //Strength
+        jabDamageHead = strength;
+        jabDamageBody = strength;
+        crossDamageHead = strength;
+        crossDamageBody = strength;
+
+        //Endurance
+        jabStaminaUseHead = endurance - jabLowerStaminaUse;
+        crossStaminaUseHead = endurance;
+        jabStaminaUseBody = endurance - jabLowerStaminaUse;
+        crossStaminaUseBody = endurance;
+    }
+
+    public void fighterStateUpdate(bool knockdown)
+    {
+        if (knockdown == true){
+            fighterStateNow = fighterState.Knockdown;
+        }
+    }
+
+    public void staminaRecoveryMinValue()
+    {
+        if (staminaRecoveryBetweenRounds < 0)
+        {
+            staminaRecoveryBetweenRounds = 0;
+        }
     }
 
 }

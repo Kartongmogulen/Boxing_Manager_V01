@@ -22,7 +22,7 @@ public class actionsLeftPlayer : MonoBehaviour
     public void subActionPoints()
     {
         playerOnesTurn = GetComponent<fightManager>().playerOnesTurn;
-
+ 
         actionPointsNow--;
         if (actionPointsNow == 0)
             resetActionPoints();
