@@ -13,21 +13,24 @@ public class roundManager : MonoBehaviour
     private int roundFightLength; //Antal ronder i fighten
     public int roundNow;
     private int minInRound; //Antal min som gått i ronden
-    private int secInRound; //Antal sekunder som gått i ronden
-    private int roundActionsPerPlayer; //Antal aktioner varje spelare får göra innan ronden är slut
+    private float secInRound; //Antal sekunder som gått i ronden
+    private float roundActionsPerPlayer; //Antal aktioner varje spelare får göra innan ronden är slut
+    public bool playerOneWonOnDecision;
+
+    public GameObject victoryPanelGO;
 
     public TextMeshProUGUI roundClock;
     private void Start()
     {
         roundFightLength = GetComponent<fightManager>().roundFightLength;
         roundActionsPerPlayer = GetComponent<fightManager>().roundActionsPerRound;
-        roundNow = 1;
+        //roundNow = 1;
     }
 
     public void afterPlayerAction()
     {
         secInRound += 180 / roundActionsPerPlayer / 2;
-
+        
         if (secInRound>=60)
         {
             minInRound++;
@@ -46,18 +49,30 @@ public class roundManager : MonoBehaviour
     //Nollställer vid rondens slut
    public void resetRound()
     {
-        Debug.Log("Reset round");
+        //Debug.Log("Reset round");
         roundNow++;
         minInRound = 0;
 
-        GetComponent<betweenRounds>().recoverStats();
+        GetComponent<betweenRounds>().recoverStats(GetComponent<fightManager>().PlayerTwo);
         GetComponent<scorecardManager>().compareKnockdowns();
 
         //Matchen har gått tiden ut
-        if (roundNow == roundFightLength + 1)
+        if (roundNow == roundFightLength)
         {
-            Debug.Log("Matchen har gått tiden ut");
-            GetComponent<scorecardManager>().scorecardToGetWinner();
+            //Debug.Log("Matchen har gått tiden ut");
+            playerOneWonOnDecision = GetComponent<scorecardManager>().scorecardToGetWinner();
+            //if (playerOneWonOnDecision == true)
+            GetComponent<fightManager>().fightEndedDecision();
+            //victoryPanelGO.GetComponent<afterFightUpdate>().decisionUpdate(playerOneWonOnDecision);
         }
+    }
+
+    public void resetRoundAfterFight()
+    {
+        roundNow = 1;
+        minInRound = 0;
+        secInRound = 0;
+
+        roundClock.text = "Round: " + roundNow + "  Min: " + minInRound + " Sec: " + secInRound;
     }
 }

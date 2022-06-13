@@ -7,6 +7,7 @@ public class mouseOverButtonInfo : MonoBehaviour
 {
     public player PlayerOne;
     public player PlayerTwo;
+    public GameObject fightScriptGO;
 
     public Text buttonJabHeadText;
     public Text buttonJabBodyText;
@@ -24,6 +25,7 @@ public class mouseOverButtonInfo : MonoBehaviour
 
     public void mouseOverJabHead()
     {
+        getPlayerTwo();
         actionDescritionText.text = buttonJabHeadText.text;
         damageText.text = "Damage: " + PlayerOne.jabDamageHead;
         staminaDamageText.text = "Stamina damage: " + 0;
@@ -34,6 +36,7 @@ public class mouseOverButtonInfo : MonoBehaviour
 
     public void mouseOverJabBody()
     {
+        getPlayerTwo();
         actionDescritionText.text = buttonJabBodyText.text;
         damageText.text = "Damage: " + PlayerOne.jabDamageBody;
         staminaDamageText.text = "Stamina damage: " + PlayerOne.jabStaminaDamageBody;
@@ -44,6 +47,7 @@ public class mouseOverButtonInfo : MonoBehaviour
 
     public void mouseOverCrossHead()
     {
+        getPlayerTwo();
         actionDescritionText.text = buttonCrossHeadText.text;
         damageText.text = "Damage: " + PlayerOne.crossDamageHead;
         staminaDamageText.text = "Stamina damage: " + 0;
@@ -54,9 +58,10 @@ public class mouseOverButtonInfo : MonoBehaviour
 
     public void mouseOverCrossBody()
     {
+        getPlayerTwo();
         actionDescritionText.text = buttonCrossBodyText.text;
         damageText.text = "Damage: " + PlayerOne.crossDamageBody;
-        staminaDamageText.text = "Stamina damage: " + PlayerOne.crossStaminaDamageBody; 
+        staminaDamageText.text = "Stamina damage: " + PlayerOne.crossStaminaDamageBody;
         staminaUsePlayerText.text = "Stamina use: " + PlayerOne.crossStaminaUseBody;
         accuracyStatText.text = "Accuracy: " + PlayerOne.crossAccuracyBody;
         guardStatText.text = "Guard (def): " + PlayerTwo.guardBody;
@@ -64,11 +69,19 @@ public class mouseOverButtonInfo : MonoBehaviour
 
     public void OnMouseExit()
     {
+    
         actionDescritionText.text = "";
         damageText.text = "Damage: ";
         staminaDamageText.text = "Stamina damage: ";
         staminaUsePlayerText.text = "Stamina use: ";
         accuracyStatText.text = "Accuracy: ";
         guardStatText.text = "Guard (def): ";
+    }
+
+    public void getPlayerTwo()
+    {
+      
+        PlayerTwo = fightScriptGO.GetComponent<fightManager>().PlayerTwo; 
+        
     }
 }

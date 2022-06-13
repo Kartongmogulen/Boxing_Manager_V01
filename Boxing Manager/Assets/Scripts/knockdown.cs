@@ -15,11 +15,13 @@ public class knockdown : MonoBehaviour
 
     public bool willPlayerGetKnockdown(player attacker, player defender, bool head)
     {
-    
+        //Debug.Log("Attack Knockdown Potential: " + attacker.crossKnockDownHead);
         if (head == true)
         {
-            attackerRandomNumb = Random.Range(0, attacker.crossKnockDownHead);
-            defenderRandomNumb = Random.Range(0, defender.guardHead);
+            attackerRandomNumb = Random.Range(0, attacker.crossKnockDownHead+1);
+            //Debug.Log("Attack Knockdown´Roll: " + attackerRandomNumb);
+            defenderRandomNumb = Random.Range(0, defender.guardHead+1);
+            //Debug.Log("Defender Knockdown Roll: " + defenderRandomNumb);
 
             if (attackerRandomNumb > defenderRandomNumb)
             {
@@ -33,11 +35,11 @@ public class knockdown : MonoBehaviour
 
     public void willPlayerGetUp(player defender)
     {
-        Debug.Log("Will player get up");
-        if (defender.knockdownCounter < 2)
+        //Debug.Log("Will player get up");
+        if (defender.knockdownCounter < GetComponent<fightManager>().totalKnockdownCountBeforeStop)
         {
             timePlayerGetsUp = Random.Range(3, 5);
-            Debug.Log("Time player get up: " + timePlayerGetsUp);
+            //Debug.Log("Time player get up: " + timePlayerGetsUp);
             GetComponent<knockdownClock>().startTimer(defender);
         }
 

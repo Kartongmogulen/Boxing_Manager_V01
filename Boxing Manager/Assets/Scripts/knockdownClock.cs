@@ -8,8 +8,8 @@ public class knockdownClock : MonoBehaviour
     //Hantera när en spelare är knockad och ska ta sig upp
     public int seconds;
     public int timePlayerGetsUp;
-    public TextMeshProUGUI actionCompletionText;
-
+    //public TextMeshProUGUI actionCompletionText;
+    public TextMeshProUGUI commentatorText;
 
     public void startTimer(player knockedDownPlayer)
     {
@@ -30,9 +30,8 @@ public class knockdownClock : MonoBehaviour
 
     public void secondsCounter(player knockedDownPlayer)
     {
-        //Debug.Log(seconds);
         seconds++;
-        actionCompletionText.text = "" + seconds;
+        commentatorText.text = "" + seconds;
         timePlayerGetsUp = GetComponent<knockdown>().timePlayerGetsUp;
 
         if (timePlayerGetsUp <= 10)
@@ -40,7 +39,7 @@ public class knockdownClock : MonoBehaviour
 
             if (timePlayerGetsUp == seconds)
             {
-                actionCompletionText.text = knockedDownPlayer.name + " gets up!";
+                commentatorText.text = knockedDownPlayer.name + " gets up!";
                 knockedDownPlayer.fighterStateNow = fighterState.None;
 
                 if (knockedDownPlayer.name == "David")//MÅSTE ÄNDRAS TILL NAMN SPELARE ETT OM MAN ÄNDRAR SPELARENS NAMN
@@ -58,8 +57,9 @@ public class knockdownClock : MonoBehaviour
         else
             if (timePlayerGetsUp == seconds)
         {
-            actionCompletionText.text = knockedDownPlayer.name + " did not get up!";
+            commentatorText.text = knockedDownPlayer.name + " did not get up!";
             knockedDownPlayer.fighterStateNow = fighterState.None;
+           GetComponent<fightManager>().fightEndedKO(knockedDownPlayer);
             return;
         }
         else

@@ -8,19 +8,31 @@ public class fightManager : MonoBehaviour
 {
     public int roundFightLength; //Antal ronder i fighten
     public int roundActionsPerRound; //Antal aktioner varje spelare får göra innan ronden är slut
+    public int totalKnockdownCountBeforeStop; //Antal knockdown för att inte ta sig upp
+    public bool endOfFight; //Om sant = slut på matchen.
 
     public player PlayerOne;
     public TextMeshProUGUI HeadHealthTextPlayerOne;
     public TextMeshProUGUI BodyHealthTextPlayerOne;
     public TextMeshProUGUI StaminaHealthTextPlayerOne;
     public bool playerOnesTurn; //Om det är spelarens eller datorns tur
+    public bool delayPlayerOneAction; //Om false ska det vara en fördröjning
+    public bool delayPlayerTwoAction; //Om false ska det vara en fördröjning
+    public bool simuatePlayerOneAction; //Om true. Spelaren väljer inte attacker själv
 
+    public playerList opponentListGO;
+    public int opponentIndex;//Vilket index av valbara motståndare som väljs
     public player PlayerTwo;
     public GameObject playerTwoFighterPanelGO;
+    public TextMeshProUGUI nameTextPlayerTwo;
     public TextMeshProUGUI BodyHealthTextPlayerTwo;
     public TextMeshProUGUI HeadHealthTextPlayerTwo;
     public TextMeshProUGUI StaminaHealthTextPlayerTwo;
     public bool knockdownState;
+
+    public GameObject fightUIScripts;
+    public GameObject fightPanelGO;
+    public GameObject victoryPanelGO;
 
     bool actionCompletedOrNot;
     string head;
@@ -29,67 +41,115 @@ public class fightManager : MonoBehaviour
 
     public TextMeshProUGUI actionCompletionText;
 
+    public succedOrNotAction SuccedOrNotAction;
+
+
     public void Start()
     {
-        playerOnesTurn = true;
-
-        HeadHealthTextPlayerOne.text = "Head: " + PlayerOne.headHealthStart;
-        BodyHealthTextPlayerOne.text = "Body: " + PlayerOne.bodyHealthStart;
-        StaminaHealthTextPlayerOne.text = "Stamina: " + PlayerOne.staminaHealthStart;
-
-        BodyHealthTextPlayerTwo.text = "Body: " + PlayerTwo.bodyHealthStart;
-        HeadHealthTextPlayerTwo.text = "Head: " + PlayerTwo.headHealthStart;
-        StaminaHealthTextPlayerTwo.text = "Stamina: " + PlayerTwo.staminaHealthNow;
+        //setUpFight(); //Ska endast vara med då spelaren börjar i en Fight. Annars används Start-knappen för att set-up fight
 
         Knockdown = GetComponent<knockdown>();
+        SuccedOrNotAction = GetComponent<succedOrNotAction>();
+
+        if (delayPlayerOneAction == false)
+        {
+            fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdatePlayer = 0;
+        }
+        if (delayPlayerTwoAction == false)
+        {
+            fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateOpponent = 0;
+        }
+    }
+
+
+    public void setUpFight()
+    {
+        Debug.Log("Set up Fight");
+        playerOnesTurn = true;
+        endOfFight = false;
+        enableFighterPanel();
+        GetComponent<actionsLeftPlayer>().actionPointsNow = GetComponent<actionsLeftPlayer>().actionPointsStart;
+        GetComponent<actionsLeftPlayer>().updateText();
+        GetComponent<roundManager>().resetRoundAfterFight();
+        PlayerTwo = opponentListGO.PlayerList[opponentIndex];
+        PlayerTwo.resetAfterFight();
+        fightUIScripts.GetComponent<healthPanelTextUpdate>().updatePlayerOneText();
+        fightUIScripts.GetComponent<healthPanelTextUpdate>().updateOpponentText();
+
+       if(simuatePlayerOneAction == true)
+        {
+            simulatePlayerOneAction();
+        }
     }
 
     /// <summary>
     /// Sköter hur matcherna hanteras
     /// 1. Val av aktion (Egen funktion)
-    /// 2. Lyckas aktionen (I funktion i val av aktion, refererar till annat script)
-    /// 3. Reducera attackerande spelarens stamina (I funktion i val av aktion, refererar till annat script)
-    /// 4. Uppdatera attackerande spelarens stats-text (Egen funktion)
-    /// 5.1 Om aktionen lyckas: Reducera försvarandes stats (Annat script)
-    /// 5.1.1 Uppdatera texten för försvarande spelare (Egen funktion)
-    /// 5.1.2 Någon specialeffekt som ska genomföras? (Annat script)
-    /// 5.2 Om aktionen misslyckas: Inget sker
-    /// 6. Minska attackerande spelarens Action-Points (FightUpdate-funktion)
-    /// 7. Uppdatera text för vad som händer i matchen (FightUpdate-funktion -> updateTextHitorNot)
-    /// 8. Kontrollera om nästa aktion kan genomföras
-    /// 9. Nästa spelarens tur? (FightUpdate-funktion)
+    /// 2. Beräkning av Träff eller Miss (I funktion i val av aktion, refererar till annat script)
+    /// 3. "Spelarnamn" försöker utföra attack X (I funktion i val av aktion, refererar till annat script)
+    /// 4. Reducera attackerande spelarens stamina (I funktion i val av aktion, refererar till annat script)
+    /// 5. Uppdatera rond-text UI. (I funktion "waitForSecondsFunc" som refererar till annat script)
+    /// 6. Inaktiverar panel så spelaren ej kan välja attack (Egen funktion)
+    /// 7. Fördröjning (Ligger inom punkt 2 som startar coroutine i annat script)
+    /// 8. Uppdatera UI om Träff eller Miss. (Ligger inom punkt 2 som startar coroutine i annat script)
+    /// 9.1 Om aktionen lyckas: Reducera försvarandes stats (Annat script)
+    /// 9.1.1 Uppdatera texten för försvarande spelare (Egen funktion)
+    /// 9.1.2 Någon specialeffekt som ska genomföras? (Annat script)
+    /// 9.2 Om aktionen misslyckas: Inget sker
+    /// 10. Minska attackerande spelarens Action-Points (afterActionChoicePlayerOne/Two-funktion)
+    /// 11. Aktivera panel för spelaren (Om det är Spelarens tur)
+    /// 12. Kontrollera om spelaren har Action-Points kvar. 
+    /// 12.1 Om inte får motståndaren genomföra sin runda
     /// 
     /// </summary>
+    /// 
 
     public void fightUpdate()
     {
-        GetComponent<actionsLeftPlayer>().subActionPoints();
-        
+        Debug.Log("FightUpdateStart");
+        //Debug.Log("PlayerOnesTurn: " + playerOnesTurn);
+        //GetComponent<actionsLeftPlayer>().subActionPoints();
 
-            //Kontrollera om det är motståndarens tur
-            if (playerOnesTurn == false && PlayerTwo.fighterStateNow == fighterState.None)
-            {
-            
-                GetComponent<playerTwoAction>().randomized();
-                StartCoroutine(checkIfNextRoundCanStart());
-                
-            }
 
-        updateTextHitorNot(actionCompletedOrNot);
-        GetComponent<roundManager>().afterPlayerAction();
+        //Kontrollera om det är motståndarens tur
+        //12. START-------
+        Debug.Log("PlayerOnes Turn: " + playerOnesTurn);
+        Debug.Log("FightState: " + PlayerTwo.fighterStateNow);
+        if (playerOnesTurn == false && PlayerTwo.fighterStateNow == fighterState.None && endOfFight == false)
+        //12. END -------
+        {
+            StartCoroutine(waitForSecondsFunc(0, "playerTwoAction"));
+        }
+
+        //updateTextHitorNot(actionCompletedOrNot);
+        //GetComponent<roundManager>().afterPlayerAction();
 
         updatePlayerOne();
         updatePlayerTwo();
     }
 
-    IEnumerator checkIfNextRoundCanStart()
+    
+
+        IEnumerator checkIfNextRoundCanStart()
     {
         //updateTextHitorNot(actionCompletedOrNot);
         if (PlayerOne.fighterStateNow == fighterState.None && PlayerTwo.fighterStateNow == fighterState.None)
         {
-            enableFighterPanel();
-            fightUpdate();
-            
+            if (playerOnesTurn == true)
+            {
+                enableFighterPanel();
+                fightUpdate();
+                //Debug.Log("FightUpdatePlayerOne");
+            }
+            if (playerOnesTurn == false)
+            {
+                StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateOpponent, "fightUpdateDelay")); //*2
+                //fightUpdate();
+                Debug.Log("FightUpdatePlayerTwo: ");
+            }
+            yield return new WaitForSeconds(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateSpeedFlow); //* 2);
+            //fightUpdate();
+
         }
 
         else if (PlayerTwo.fighterStateNow == fighterState.Knockdown)
@@ -97,7 +157,7 @@ public class fightManager : MonoBehaviour
             disableFighterPanel();
             GetComponent<knockdown>().willPlayerGetUp(PlayerTwo);
             PlayerTwo.knockdownCounter++;
-            actionCompletionText.text = PlayerTwo.name + " gets knockdowned!";
+            //actionCompletionText.text = PlayerTwo.name + " gets knockdowned!";
             Debug.Log("Vänta sec: " + Knockdown.timePlayerGetsUp);
             yield return new WaitForSeconds(Knockdown.timePlayerGetsUp + 1);
             StartCoroutine(checkIfNextRoundCanStart());
@@ -115,193 +175,328 @@ public class fightManager : MonoBehaviour
         }
 
         else
-            fightUpdate();
+        StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateSpeedFlow, "fightUpdate"));
+        //fightUpdate();
             
             
       }
 
         public void updatePlayerOne()
     {
-        HeadHealthTextPlayerOne.text = "Head: " + PlayerOne.headHealthNow;
-        BodyHealthTextPlayerOne.text = "Body: " + PlayerOne.bodyHealthNow;
-        StaminaHealthTextPlayerOne.text = "Stamina: " + PlayerOne.staminaHealthNow;
+        fightUIScripts.GetComponent<healthPanelTextUpdate>().updatePlayerOneText();
         PlayerOne.staminaRecoveryMinValue();
     }
 
     public void updatePlayerTwo()
     {
-        HeadHealthTextPlayerTwo.text = "Head: " + PlayerTwo.headHealthNow;
-        BodyHealthTextPlayerTwo.text = "Body: " + PlayerTwo.bodyHealthNow;
-        StaminaHealthTextPlayerTwo.text = "Stamina: " + PlayerTwo.staminaHealthNow;
+        fightUIScripts.GetComponent<healthPanelTextUpdate>().updateOpponentText();
         PlayerTwo.staminaRecoveryMinValue();
-
+        //StartCoroutine(checkIfNextRoundCanStart());
     }
 
+   
+
+    //1. START-----------------------------------------------------------------
     public void playerOneJabHead()
     {
-        actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerOne, PlayerTwo, true);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerOne, PlayerOne.jabStaminaUseHead);
-        updatePlayerOne();
+        //Debug.Log("PlayerOneJabHead");
+        //actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerOne, PlayerTwo, true);
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerOne.accuracy, PlayerTwo.guardHead, true);
+        //2.END-----------
 
         if (actionCompletedOrNot == true)
-        GetComponent <headHealthUpdate>().updateHeadHealth(PlayerTwo,PlayerOne.jabDamageHead);
-        
-        updatePlayerTwo();
-        StartCoroutine(checkIfNextRoundCanStart());
+        {
+            //9.1 START----------
+            PlayerTwo.GetComponent<player>().updateHeadHealth(PlayerOne.jabDamageHead);
+            //9.1 END----------
 
+            //3.START-------------------
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, true,true, false);
+        }
+        else
+        fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, true, false, false);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerOne.GetComponent<player>().updateStamina(PlayerOne.jabStaminaUseHead);
+        //4.END----------
+        updatePlayerOne();
+
+        afterActionChoicePlayerOne();
     }
 
     public void playerTwoJabHead()
     {
+        //2.START-----------
         actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerTwo, PlayerOne, true);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerTwo, PlayerTwo.jabStaminaUseHead);
-        updatePlayerTwo();
+        //2.END-----------
 
         if (actionCompletedOrNot == true)
         {
-            GetComponent<headHealthUpdate>().updateHeadHealth(PlayerOne, PlayerTwo.jabDamageHead);
+            //9.1 START----------
+            PlayerOne.GetComponent<player>().updateHeadHealth(PlayerTwo.jabDamageHead);
+            //9.1 END----------
+
+            //3.START----------
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, true, true, false);
 
         }
-        updatePlayerOne();
-     
+        else
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, true, false, false);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.jabStaminaUseHead);
+        //4.END----------
+        updatePlayerTwo();
+
+        afterActionChoicePlayerTwo();
     }
 
     public void playerOneCrossHead()
     {
-        actionCompletedOrNot = GetComponent<crossFight>().cross(PlayerOne, PlayerTwo, true);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerOne, PlayerOne.crossStaminaUseHead);
-        updatePlayerOne();
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerOne.accuracy, PlayerTwo.guardHead, true);
+        //2.END-----------
 
         //Träffar slaget
         if (actionCompletedOrNot == true)
         {
-            GetComponent<headHealthUpdate>().updateHeadHealth(PlayerTwo, PlayerOne.crossDamageHead);
-            knockdownState = Knockdown.willPlayerGetKnockdown(PlayerOne, PlayerTwo, true);
+            //9.1 START----------
+            PlayerTwo.GetComponent<player>().updateHeadHealth(PlayerOne.crossDamageHead);
+            //9.1 END----------
 
-            
+            //9.1.2 START----------
+            knockdownState = Knockdown.willPlayerGetKnockdown(PlayerOne, PlayerTwo, true);
             if (knockdownState == true)
             {
                 PlayerTwo.fighterStateUpdate(true);
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, false, true, true);
             }
-          
-            updatePlayerTwo();
-            //fightUpdate();
-            StartCoroutine(checkIfNextRoundCanStart());
+            //9.1.2 END----------
 
+            //3.START-------------------
+            if (knockdownState == false)
+            {
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, false, true, false);
+            }
         }
-
         else
-        {
-            updatePlayerTwo();
-            //fightUpdate();
-            StartCoroutine(checkIfNextRoundCanStart());
-        }
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, false, false,false);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerOne.GetComponent<player>().updateStamina(PlayerOne.crossStaminaUseHead);
+        //4.END----------
+        updatePlayerOne();
+
+        afterActionChoicePlayerOne();
+
     }
 
     public void playerTwoCrossHead()
     {
-        actionCompletionText.text = PlayerTwo.name + " throws a cross to the head";
-        actionCompletedOrNot = GetComponent<crossFight>().cross(PlayerTwo, PlayerOne, true);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerTwo, PlayerTwo.crossStaminaUseHead);
-        updatePlayerTwo();
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerTwo.accuracy, PlayerOne.guardHead, true);
+        //2.END-----------
 
         //Träffar slaget
         if (actionCompletedOrNot == true)
         {
-            GetComponent<headHealthUpdate>().updateHeadHealth(PlayerOne, PlayerTwo.crossDamageHead);
-            knockdownState = Knockdown.willPlayerGetKnockdown(PlayerTwo, PlayerOne, true);
+            //9.1 START----------
+            PlayerOne.GetComponent<player>().updateHeadHealth(PlayerTwo.crossDamageHead);
+            //9.1 END----------
 
+            //9.1.2 START----------
+            knockdownState = Knockdown.willPlayerGetKnockdown(PlayerTwo, PlayerOne, true);
             if (knockdownState == true)
             {
                 PlayerOne.fighterStateUpdate(true);
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, false, true, true);
             }
+            //9.1.2 END----------
 
-            updatePlayerOne();
-            checkIfNextRoundCanStart();
+            //3.START-------------------
+            if (knockdownState == false)
+            {
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, false, true, false);
+            }
         }
         else
-        {
-            updatePlayerOne();
-            checkIfNextRoundCanStart();
-        }
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, false, false, false);
+        //3.END-------------------
+        
+        //4.START----------
+        PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaUseHead);
+        //4.END----------
+        updatePlayerTwo();
+
+        afterActionChoicePlayerTwo();
+
     }
 
     public void playerOneJabBody()
     {
-        actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerOne, PlayerTwo, false);
 
-        //updateTextAction(actionCompletedOrNot);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerOne, PlayerOne.jabStaminaUseBody);
-        updatePlayerOne();
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerOne.accuracy, PlayerTwo.guardBody, false);
+        //2.END-----------
 
         if (actionCompletedOrNot == true)
         {
-            GetComponent<bodyHealthUpdate>().updateBodyHealth(PlayerTwo, PlayerOne.jabDamageBody);
-            GetComponent<staminaUpdate>().updateStamina(PlayerTwo, PlayerOne.jabStaminaDamageBody);
+            //9.1 START----------
+            PlayerTwo.GetComponent<player>().updateBodyHealth(PlayerOne.jabDamageBody);
+            PlayerTwo.GetComponent<player>().updateStamina(PlayerOne.jabStaminaDamageBody);
+            //9.1 END----------
+
+            //3.START-------------------
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, true, true, false);
         }
-        updatePlayerTwo();
-        StartCoroutine(checkIfNextRoundCanStart());
+        else
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, true, false, false);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerOne.GetComponent<player>().updateStamina(PlayerOne.jabStaminaUseBody);
+        //4.END----------
+        
+        updatePlayerOne();
+        afterActionChoicePlayerOne();
+
     }
 
     public void playerTwoJabBody()
     {
-        actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerTwo, PlayerOne, false);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerTwo, PlayerTwo.jabStaminaUseBody);
-        updatePlayerTwo();
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerTwo.accuracy, PlayerOne.guardBody, false);
+        //2.END-----------
 
         if (actionCompletedOrNot == true)
         {
-            GetComponent<bodyHealthUpdate>().updateBodyHealth(PlayerOne, PlayerTwo.jabDamageBody);
-            GetComponent<staminaUpdate>().updateStamina(PlayerOne, PlayerTwo.jabStaminaDamageBody);
+            //9.1 START----------
+            PlayerOne.GetComponent<player>().updateBodyHealth(PlayerTwo.jabDamageBody);
+            PlayerOne.GetComponent<player>().updateStamina(PlayerTwo.jabStaminaDamageBody);
+            //9.1 END----------
+
+            //3.START-------------------
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, true, true, false);
         }
-        updatePlayerOne();
- 
+        else
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, true, false, false);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.jabStaminaUseBody);
+        //4.END----------
+
+        updatePlayerTwo();
+        afterActionChoicePlayerTwo();
+
     }
 
     public void playerOneCrossBody()
     {
-        actionCompletedOrNot = GetComponent<crossFight>().cross(PlayerOne, PlayerTwo, false);
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerOne.accuracy, PlayerTwo.guardBody, false);
+        //2.END-----------
 
-        //updateTextAction(actionCompletedOrNot);
-
-        GetComponent<staminaUpdate>().updateStamina(PlayerOne, PlayerOne.crossStaminaUseBody);
-        updatePlayerOne();
-
+        //Träffar slaget
         if (actionCompletedOrNot == true)
         {
-            GetComponent<bodyHealthUpdate>().updateBodyHealth(PlayerTwo, PlayerOne.crossDamageBody);
-            GetComponent<staminaUpdate>().updateStamina(PlayerTwo, PlayerOne.crossStaminaDamageBody);
-            PlayerTwo.staminaRecoveryBetweenRounds -= PlayerOne.crossStaminaRecoveryDamageBody;
-        }
+            //9.1 START----------
+            PlayerTwo.GetComponent<player>().updateBodyHealth(PlayerOne.crossDamageBody);
+            //9.1 END----------
 
-        updatePlayerTwo();
-        StartCoroutine(checkIfNextRoundCanStart());
+            //9.1.2 START----------Specialattack
+            actionCompletedOrNot = SuccedOrNotAction.action(PlayerOne.reduceOpponentStaminaRecoveryChance, PlayerTwo.guardBody, false);
+            //Debug.Log(PlayerOne.reduceOpponentStaminaRecoveryChance);
+            if (actionCompletedOrNot == true)
+            {
+                PlayerTwo.staminaRecoveryBetweenRounds --;
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, false, true, true);
+                //9.1.2 END----------
+            }
+            else
+            {
+                //3.START-------------------
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, false, true, false);
+            }
+
+        }
+        else
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, false, false, true);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerOne.GetComponent<player>().updateStamina(PlayerOne.crossStaminaUseBody);
+        //4.END----------
+        updatePlayerOne();
+
+        afterActionChoicePlayerOne();
+
     }
 
     public void playerTwoCrossBody()
     {
+
+        //2.START-----------
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerTwo.accuracy, PlayerOne.guardBody, false);
+        //2.END-----------
+
+        //Träffar slaget
+        if (actionCompletedOrNot == true)
+        {
+            //Debug.Log("PlayerTwo BodyCross Hit");
+            //9.1 START----------
+            PlayerOne.GetComponent<player>().updateBodyHealth(PlayerTwo.crossDamageBody);
+            //9.1 END----------
+
+            //9.1.2 START----------Specialattack
+            actionCompletedOrNot = SuccedOrNotAction.action(PlayerTwo.reduceOpponentStaminaRecoveryChance, PlayerOne.guardBody, false);
+            //Debug.Log(PlayerOne.reduceOpponentStaminaRecoveryChance);
+            if (actionCompletedOrNot == true)
+            {
+                PlayerOne.staminaRecoveryBetweenRounds--;
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, false, true, true);
+            }
+            else
+            {
+                //3.START-------------------
+                fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, false, true, false);
+            }
+
+        }
+        else
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, false, false, true);
+        //3.END-------------------
+
+        //4.START----------
+        PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaUseBody);
+        //4.END----------
+        updatePlayerTwo();
+
+        afterActionChoicePlayerTwo();
+
+
+        /*
         actionCompletedOrNot = GetComponent<crossFight>().cross(PlayerTwo, PlayerOne, false);
 
-        GetComponent<staminaUpdate>().updateStamina(PlayerTwo, PlayerTwo.crossStaminaUseBody);
+        PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaUseBody);
         updatePlayerTwo();
 
         if (actionCompletedOrNot == true)
         {
-            GetComponent<bodyHealthUpdate>().updateBodyHealth(PlayerOne, PlayerTwo.crossDamageBody);
-            GetComponent<staminaUpdate>().updateStamina(PlayerOne, PlayerTwo.crossStaminaDamageBody);
+            PlayerOne.GetComponent<player>().updateBodyHealth(PlayerTwo.crossDamageBody);
+            PlayerOne.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaDamageBody);
             PlayerOne.staminaRecoveryBetweenRounds -= PlayerTwo.crossStaminaRecoveryDamageBody;
         }
 
         updatePlayerOne();
+        */
     }
-
-    public void updateTextHitorNot(bool completion) 
+    //1. END --------------------------------------------------------
+    /*public void updateTextHitorNot(bool completion) 
     {
         if (completion == true)
         {
@@ -317,7 +512,7 @@ public class fightManager : MonoBehaviour
             if (PlayerOne.fighterStateNow == fighterState.Knockdown)
             {
                 actionCompletionText.text = PlayerOne.name + " gets knockdowned!";
-               
+
             }
         }
 
@@ -325,17 +520,131 @@ public class fightManager : MonoBehaviour
             actionCompletionText.text = "MISS";
 
     }
+    */
 
+    IEnumerator waitForSecondsFunc(int seconds, string functionName)
+    {
+
+        yield return new WaitForSeconds(seconds);
+        if (functionName == "updatePlayerTwoFunc")
+        {
+            //Debug.Log("UpdatePlayer2");
+            updatePlayerTwo();
+            StartCoroutine(checkIfNextRoundCanStart());
+            //5.START--------
+            GetComponent<roundManager>().afterPlayerAction();
+            //5.END--------
+        }
+
+        if (functionName == "updatePlayerOneFunc")
+        {
+            updatePlayerOne();
+            StartCoroutine(checkIfNextRoundCanStart());
+            //5.START--------
+            GetComponent<roundManager>().afterPlayerAction();
+            //5.END--------
+
+        }
+
+        if (functionName == "fightUpdateDelay")
+        {
+     
+            fightUpdate();
+            
+        }
+
+        if (functionName == "playerTwoAction")
+        {
+            if (PlayerTwo.GetComponent<player>().fightStyleNow == fightStyle.Headhunter)
+            {
+                GetComponent<playerTwoAction>().headHunter();
+            }
+
+            if (PlayerTwo.GetComponent<player>().fightStyleNow == fightStyle.BodySnatcher)
+            {
+                GetComponent<playerTwoAction>().bodySnatcher();
+            }
+
+            //GetComponent<playerTwoAction>().crossHead();
+            //GetComponent<playerTwoAction>().randomizedHead();
+            //GetComponent<playerTwoAction>().jabBody();
+            //GetComponent<playerTwoAction>().crossBody();
+        }
+
+    }
+
+    //6.START--------------
     void disableFighterPanel()
     {
         playerTwoFighterPanelGO.active = false;
     }
+    //6.END--------------
 
+    
+
+    //10. START--------------
+    public void afterActionChoicePlayerOne()
+    {
+        StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdatePlayer * 2, "updatePlayerTwoFunc"));
+        disableFighterPanel();
+        GetComponent<actionsLeftPlayer>().subActionPoints();
+    }
+
+    public void afterActionChoicePlayerTwo()
+    {
+        StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateOpponent * 2, "updatePlayerOneFunc"));
+        GetComponent<actionsLeftPlayer>().subActionPoints();
+    }
+    //10. END--------------
+
+    //11. START---------
     void enableFighterPanel()
     {
         playerTwoFighterPanelGO.active = true;
     }
+    //11. END---------
 
+        //Stoppa simulering när matchen är slut
+    public void fightEndedKO(player playerWhoLost)
+    {
+        endOfFight = true;
+        fightPanelGO.active = false;
+        victoryPanelGO.active = true;
+        if (playerWhoLost == PlayerTwo)
+        {
+            victoryPanelGO.GetComponent<afterFightUpdate>().updateText(PlayerOne, true);
+            rankUpPlayer();
+        }
+        else
+            victoryPanelGO.GetComponent<afterFightUpdate>().updateText(PlayerOne, false);
 
+        PlayerOne.resetAfterFight();
+    }
 
+    public void fightEndedDecision()
+    {
+        endOfFight = true;
+        fightPanelGO.active = false;
+        victoryPanelGO.active = true;
+
+        if (GetComponent<roundManager>().playerOneWonOnDecision == true)
+        {
+            victoryPanelGO.GetComponent<afterFightUpdate>().decisionUpdate(true);
+            rankUpPlayer();
+        }
+        else
+            victoryPanelGO.GetComponent<afterFightUpdate>().decisionUpdate(false);
+
+        PlayerOne.resetAfterFight();
+    }
+
+    public void rankUpPlayer()
+    {
+        opponentIndex++;
+    }
+
+    public void simulatePlayerOneAction()
+    {
+        playerOneJabHead();
+    }
 }

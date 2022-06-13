@@ -9,6 +9,69 @@ public class playerTwoAction : MonoBehaviour
     int i;
     public int numberOfActionsAvailable;//Antal aktioner att välja på
     /// </summary>
+    /// 
+
+        public void headHunter()
+    {
+        //Debug.Log("Headhunter action");
+        randomNumb = Random.Range(0, 100);
+        //Debug.Log("Random nr: " + randomNumb);
+
+        if (randomNumb <= 33)
+        {
+            GetComponent<fightManager>().playerTwoJabHead();
+            Debug.Log("Jab Head");
+        }
+
+        else if (randomNumb <= 66)
+        {
+            GetComponent<fightManager>().playerTwoCrossHead();
+            Debug.Log("Cross Head");
+        }
+
+        else if (randomNumb <= 83)
+        {
+            GetComponent<fightManager>().playerTwoCrossBody();
+            Debug.Log("Cross Body");
+        }
+
+        else
+        {
+            GetComponent<fightManager>().playerTwoJabBody();
+            Debug.Log("Jab Body");
+        }
+    }
+
+    public void bodySnatcher()
+    {
+        //Debug.Log("Headhunter action");
+        randomNumb = Random.Range(0, 100);
+        //Debug.Log("Random nr: " + randomNumb);
+
+        if (randomNumb <= 33)
+        {
+            GetComponent<fightManager>().playerTwoJabBody();
+            Debug.Log("Jab Body");
+        }
+
+        else if (randomNumb <= 66)
+        {
+            GetComponent<fightManager>().playerTwoCrossBody();
+            Debug.Log("Cross Head");
+        }
+
+        else if (randomNumb <= 83)
+        {
+            GetComponent<fightManager>().playerTwoCrossHead();
+            Debug.Log("Cross Body");
+        }
+
+        else
+        {
+            GetComponent<fightManager>().playerTwoJabHead();
+            Debug.Log("Jab Body");
+        }
+    }
 
     //Slumpar aktion
     public void randomized ()
@@ -49,7 +112,22 @@ public class playerTwoAction : MonoBehaviour
 
     }
 
-    public void crossHead()
+    public void randomizedHead()
+    {
+        randomNumb = Random.Range(0, 100);
+        //Debug.Log("RandomizedHead: " + randomNumb);
+
+        if (randomNumb <= (100 / 2))
+        {
+            GetComponent<fightManager>().playerTwoJabHead();
+        }
+
+        else
+            GetComponent<fightManager>().playerTwoCrossHead();
+
+    }
+
+        public void crossHead()
     {
         GetComponent<fightManager>().playerTwoCrossHead();
         i++;

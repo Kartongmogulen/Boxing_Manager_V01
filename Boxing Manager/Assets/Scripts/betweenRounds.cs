@@ -15,7 +15,7 @@ public class betweenRounds : MonoBehaviour
         
     }
 
-    public void recoverStats()
+    public void recoverStats(player PlayerTwo)
     {
 
         newStaminaValue = PlayerOne.staminaHealthNow + PlayerOne.staminaRecoveryBetweenRounds;

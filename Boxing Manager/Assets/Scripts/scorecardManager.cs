@@ -8,6 +8,8 @@ public class scorecardManager : MonoBehaviour
     /// Hanterar rondresultat och vem som vinner
     /// </summary>
 
+    public fightManager FightManager;
+
     public player PlayerOne;
     public player PlayerTwo;
 
@@ -22,6 +24,7 @@ public class scorecardManager : MonoBehaviour
     public int knockdownsDuringRoundBeforePlayerOne; //Antal ggr spelaren blivit knockad föregående rond
     public int damageDuringRoundPlayerOne;
     public int totalScorePlayerOne;
+    public bool playerOneWonOnDecision;
 
     //Spelare 2
     public int knockdownsCounterPlayerTwo; //Antal ggr spelaren blivit knockad
@@ -30,9 +33,14 @@ public class scorecardManager : MonoBehaviour
     public int damageDuringRoundPlayerTwo;
     public int totalScorePlayerTwo;
 
+    private void Start()
+    {
+        FightManager = GetComponent<fightManager>();
+    }
+
     public void compareKnockdowns()
     {
-
+        PlayerTwo = FightManager.PlayerTwo;
         //Spelare 1
         knockdownsCounterPlayerOne = PlayerOne.knockdownCounter;
         knockdownsDuringRoundPlayerOne = knockdownsCounterPlayerOne - knockdownsDuringRoundBeforePlayerOne;
@@ -49,7 +57,7 @@ public class scorecardManager : MonoBehaviour
 
     public void scoreRound()
     {
-        Debug.Log("Diff knockdown: " + diffKnockdownsPlayerOneMinusPlayerTwo);
+        //Debug.Log("Diff knockdown: " + diffKnockdownsPlayerOneMinusPlayerTwo);
         if (diffKnockdownsPlayerOneMinusPlayerTwo < 0)
         {
             scoreRoundPlayerOne.Add(10);
@@ -97,7 +105,7 @@ public class scorecardManager : MonoBehaviour
         }
     }
 
-    public void scorecardToGetWinner()
+    public bool scorecardToGetWinner()
     {
       
         for (int i = 0;  i < scoreRoundPlayerOne.Count; i++)
@@ -105,6 +113,16 @@ public class scorecardManager : MonoBehaviour
             totalScorePlayerOne += scoreRoundPlayerOne[i];
             totalScorePlayerTwo += scoreRoundPlayerTwo[i];
         }
+
+        if (totalScorePlayerOne > totalScorePlayerTwo) 
+        {
+            playerOneWonOnDecision = true;
+        }
+        else
+        {
+            playerOneWonOnDecision = false;
+        }
+        return playerOneWonOnDecision;
     }
 
 }
