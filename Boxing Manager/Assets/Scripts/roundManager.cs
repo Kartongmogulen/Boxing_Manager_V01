@@ -18,6 +18,7 @@ public class roundManager : MonoBehaviour
     public bool playerOneWonOnDecision;
 
     public GameObject victoryPanelGO;
+    public GameObject statisticsGO;
 
     public TextMeshProUGUI roundClock;
     private void Start()
@@ -40,6 +41,7 @@ public class roundManager : MonoBehaviour
         if (minInRound == 3)
         {
             resetRound();
+            Debug.Log("Round now: " + roundNow);
         }
 
         roundClock.text = "Round: " + roundNow + "  Min: " + minInRound +  " Sec: " + secInRound;
@@ -74,5 +76,10 @@ public class roundManager : MonoBehaviour
         secInRound = 0;
 
         roundClock.text = "Round: " + roundNow + "  Min: " + minInRound + " Sec: " + secInRound;
+    }
+
+    public void addStatisticFightEndedRound()
+    {
+        statisticsGO.GetComponent<fightStatistics>().addRound(roundNow);
     }
 }

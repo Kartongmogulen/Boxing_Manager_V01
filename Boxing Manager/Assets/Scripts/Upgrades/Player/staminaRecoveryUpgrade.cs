@@ -27,7 +27,7 @@ public class staminaRecoveryUpgrade : MonoBehaviour
     }
     public void sub()
     {
-        if (playerOne.playerLvlHealthStaminaRecovery > 0)
+        if (playerOne.playerLvlHealthStaminaRecovery > 0 && playerOne.staminaRecoveryBetweenRounds > playerOne.staminaRecoveryBetweenRoundsAfterLastFight)
         {
             playerOne.playerLvlHealthStaminaRecovery--;
             playerOne.expPointsNow++;

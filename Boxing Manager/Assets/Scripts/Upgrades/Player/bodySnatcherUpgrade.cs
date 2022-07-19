@@ -20,7 +20,7 @@ public class bodySnatcherUpgrade : MonoBehaviour
 
     public void sub()
     {
-        if (playerOne.reduceOpponentStaminaRecoveryChance > 0)
+        if (playerOne.reduceOpponentStaminaRecoveryChance > 0 && playerOne.reduceOpponentStaminaRecoveryChance > playerOne.reduceOpponentStaminaRecoveryChanceStatAfterLastFight)
         {
             playerOne.reduceOpponentStaminaRecoveryChance--;
             playerOne.expPointsNow++;

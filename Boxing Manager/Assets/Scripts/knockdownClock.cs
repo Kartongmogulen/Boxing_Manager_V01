@@ -8,11 +8,17 @@ public class knockdownClock : MonoBehaviour
     //Hantera när en spelare är knockad och ska ta sig upp
     public int seconds;
     public int timePlayerGetsUp;
-    //public TextMeshProUGUI actionCompletionText;
+    public int knockdownSkipInt;
+   
     public TextMeshProUGUI commentatorText;
 
-    public void startTimer(player knockedDownPlayer)
+    public void startTimer(player knockedDownPlayer, bool knockdownCountSkip)
     {
+        if (knockdownCountSkip == true)
+            knockdownSkipInt = 0;
+        else
+            knockdownSkipInt = 1;
+
         seconds = 0;
         StartCoroutine(timer(knockedDownPlayer));
     }
@@ -24,7 +30,7 @@ public class knockdownClock : MonoBehaviour
         {
             yield break;
         }
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(knockdownSkipInt);
         secondsCounter(knockedDownPlayer);
     }
 

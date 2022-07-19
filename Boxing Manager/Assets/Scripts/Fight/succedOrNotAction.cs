@@ -16,17 +16,19 @@ public class succedOrNotAction : MonoBehaviour
         //Will the action succed?
         if (head == true)
         {
-            randomAttacker = Random.Range(0, attackerStat);
+            randomAttacker = Random.Range(1, attackerStat+1);
             //Debug.Log("Attacker Roll: " + randomAttacker);
-            randomDefender = Random.Range(0, defenderStat);
+            randomDefender = Random.Range(1, defenderStat+1);
             //Debug.Log("Defender Roll: " + randomDefender);
+            //Debug.Log("Attack: " + randomAttacker + " VS Defender: " + randomDefender);
         }
 
         else
         {
             //Debug.Log("succedOrNotAction Body");
-            randomAttacker = Random.Range(0, attackerStat);
-            randomDefender = Random.Range(0, defenderStat);
+            randomAttacker = Random.Range(1, attackerStat+1);
+            randomDefender = Random.Range(1, defenderStat+1);
+            //Debug.Log("Attack: " + randomAttacker + " VS Defender: " + randomDefender);
         }
 
         if (randomAttacker > randomDefender)

@@ -9,6 +9,8 @@ public class fightManager : MonoBehaviour
     public int roundFightLength; //Antal ronder i fighten
     public int roundActionsPerRound; //Antal aktioner varje spelare får göra innan ronden är slut
     public int totalKnockdownCountBeforeStop; //Antal knockdown för att inte ta sig upp
+    public bool skipKnockDownCounter; //Vid knockdown. Räknar inte utan får se resultat direkt
+
     public bool endOfFight; //Om sant = slut på matchen.
 
     public player PlayerOne;
@@ -19,6 +21,9 @@ public class fightManager : MonoBehaviour
     public bool delayPlayerOneAction; //Om false ska det vara en fördröjning
     public bool delayPlayerTwoAction; //Om false ska det vara en fördröjning
     public bool simuatePlayerOneAction; //Om true. Spelaren väljer inte attacker själv
+    public Text actionPerformedPlayerOne;
+    public Text actionSuccededPlayerOne;
+    public Text actionFailedPlayerOne;
 
     public playerList opponentListGO;
     public int opponentIndex;//Vilket index av valbara motståndare som väljs
@@ -29,12 +34,17 @@ public class fightManager : MonoBehaviour
     public TextMeshProUGUI HeadHealthTextPlayerTwo;
     public TextMeshProUGUI StaminaHealthTextPlayerTwo;
     public bool knockdownState;
+    public Text actionPerformedPlayerTwo;
+    public Text actionSuccededPlayerTwo;
+    public Text actionFailedPlayerTwo;
 
     public GameObject fightUIScripts;
     public GameObject fightPanelGO;
     public GameObject victoryPanelGO;
+    public GameObject statisticsGO;
 
     bool actionCompletedOrNot;
+    bool actionCompletedOrNotSpecial;
     string head;
 
     knockdown Knockdown;
@@ -64,7 +74,7 @@ public class fightManager : MonoBehaviour
 
     public void setUpFight()
     {
-        Debug.Log("Set up Fight");
+        //Debug.Log("Set up Fight");
         playerOnesTurn = true;
         endOfFight = false;
         enableFighterPanel();
@@ -75,8 +85,11 @@ public class fightManager : MonoBehaviour
         PlayerTwo.resetAfterFight();
         fightUIScripts.GetComponent<healthPanelTextUpdate>().updatePlayerOneText();
         fightUIScripts.GetComponent<healthPanelTextUpdate>().updateOpponentText();
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().resetBetweenFight();
+        updateActionsPerformed();
+        GetComponent<scorecardManager>().resetAfterFight();
 
-       if(simuatePlayerOneAction == true)
+       if (simuatePlayerOneAction == true)
         {
             simulatePlayerOneAction();
         }
@@ -106,19 +119,24 @@ public class fightManager : MonoBehaviour
 
     public void fightUpdate()
     {
-        Debug.Log("FightUpdateStart");
+        //Debug.Log("FightUpdateStart");
         //Debug.Log("PlayerOnesTurn: " + playerOnesTurn);
         //GetComponent<actionsLeftPlayer>().subActionPoints();
 
 
         //Kontrollera om det är motståndarens tur
         //12. START-------
-        Debug.Log("PlayerOnes Turn: " + playerOnesTurn);
-        Debug.Log("FightState: " + PlayerTwo.fighterStateNow);
+        //Debug.Log("PlayerOnes Turn: " + playerOnesTurn);
+        //Debug.Log("FightState: " + PlayerTwo.fighterStateNow);
         if (playerOnesTurn == false && PlayerTwo.fighterStateNow == fighterState.None && endOfFight == false)
         //12. END -------
         {
             StartCoroutine(waitForSecondsFunc(0, "playerTwoAction"));
+        }
+
+        if (endOfFight == true)
+        {
+            addStatistics();
         }
 
         //updateTextHitorNot(actionCompletedOrNot);
@@ -140,12 +158,18 @@ public class fightManager : MonoBehaviour
                 enableFighterPanel();
                 fightUpdate();
                 //Debug.Log("FightUpdatePlayerOne");
+
+                if (simuatePlayerOneAction == true)
+                {
+                    simulatePlayerOneAction();
+                }
+
             }
             if (playerOnesTurn == false)
             {
                 StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateOpponent, "fightUpdateDelay")); //*2
                 //fightUpdate();
-                Debug.Log("FightUpdatePlayerTwo: ");
+                //Debug.Log("FightUpdatePlayerTwo: ");
             }
             yield return new WaitForSeconds(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateSpeedFlow); //* 2);
             //fightUpdate();
@@ -155,22 +179,30 @@ public class fightManager : MonoBehaviour
         else if (PlayerTwo.fighterStateNow == fighterState.Knockdown)
         {
             disableFighterPanel();
-            GetComponent<knockdown>().willPlayerGetUp(PlayerTwo);
+            GetComponent<knockdown>().willPlayerGetUp(PlayerTwo, skipKnockDownCounter);
             PlayerTwo.knockdownCounter++;
-            //actionCompletionText.text = PlayerTwo.name + " gets knockdowned!";
-            Debug.Log("Vänta sec: " + Knockdown.timePlayerGetsUp);
-            yield return new WaitForSeconds(Knockdown.timePlayerGetsUp + 1);
+            if (skipKnockDownCounter == true)
+                yield return new WaitForSeconds(1);
+            else
+                yield return new WaitForSeconds(Knockdown.timePlayerGetsUp + 1);
+         
             StartCoroutine(checkIfNextRoundCanStart());
         }
 
         else if (PlayerOne.fighterStateNow == fighterState.Knockdown)
         {
             disableFighterPanel();
-            GetComponent<knockdown>().willPlayerGetUp(PlayerOne);
+            GetComponent<knockdown>().willPlayerGetUp(PlayerOne, skipKnockDownCounter);
             PlayerOne.knockdownCounter++;
             actionCompletionText.text = PlayerOne.name + " gets knockdowned!";
-            Debug.Log("Vänta sec: " + Knockdown.timePlayerGetsUp);
-            yield return new WaitForSeconds(Knockdown.timePlayerGetsUp + 1);
+
+            if (skipKnockDownCounter == true)
+                yield return new WaitForSeconds(1);
+            else
+                yield return new WaitForSeconds(Knockdown.timePlayerGetsUp + 1);
+
+            //yield return new WaitForSeconds(Knockdown.timePlayerGetsUp + 1);
+
             StartCoroutine(checkIfNextRoundCanStart());
         }
 
@@ -203,20 +235,25 @@ public class fightManager : MonoBehaviour
         //actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerOne, PlayerTwo, true);
         //2.START-----------
         actionCompletedOrNot = SuccedOrNotAction.action(PlayerOne.accuracy, PlayerTwo.guardHead, true);
+
         //2.END-----------
 
         if (actionCompletedOrNot == true)
         {
+            PlayerOne.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerTwo.GetComponent<player>().updateHeadHealth(PlayerOne.jabDamageHead);
             //9.1 END----------
 
             //3.START-------------------
-            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, true,true, false);
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, true, true, false);
         }
         else
-        fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, true, false, false);
-        //3.END-------------------
+        {
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, true, false, false);
+            PlayerOne.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
 
         //4.START----------
         PlayerOne.GetComponent<player>().updateStamina(PlayerOne.jabStaminaUseHead);
@@ -229,11 +266,12 @@ public class fightManager : MonoBehaviour
     public void playerTwoJabHead()
     {
         //2.START-----------
-        actionCompletedOrNot = GetComponent<jabFight>().jab(PlayerTwo, PlayerOne, true);
+        actionCompletedOrNot = SuccedOrNotAction.action(PlayerTwo.accuracy, PlayerOne.guardHead, true);
         //2.END-----------
 
         if (actionCompletedOrNot == true)
         {
+            PlayerTwo.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerOne.GetComponent<player>().updateHeadHealth(PlayerTwo.jabDamageHead);
             //9.1 END----------
@@ -243,8 +281,14 @@ public class fightManager : MonoBehaviour
 
         }
         else
+        {
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, true, false, false);
-        //3.END-------------------
+            PlayerTwo.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
+
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().updateTextLastActionRound("Jab (Head)", actionCompletedOrNot);
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().fightUpdateText(true, true);
 
         //4.START----------
         PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.jabStaminaUseHead);
@@ -263,6 +307,7 @@ public class fightManager : MonoBehaviour
         //Träffar slaget
         if (actionCompletedOrNot == true)
         {
+            PlayerOne.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerTwo.GetComponent<player>().updateHeadHealth(PlayerOne.crossDamageHead);
             //9.1 END----------
@@ -271,8 +316,10 @@ public class fightManager : MonoBehaviour
             knockdownState = Knockdown.willPlayerGetKnockdown(PlayerOne, PlayerTwo, true);
             if (knockdownState == true)
             {
+                Debug.Log("PlayerTwo KO");
                 PlayerTwo.fighterStateUpdate(true);
                 fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, false, true, true);
+                PlayerTwo.GetComponent<fightStatsKnockdownCause>().specialAttackCrossKO();
             }
             //9.1.2 END----------
 
@@ -283,8 +330,11 @@ public class fightManager : MonoBehaviour
             }
         }
         else
-            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, false, false,false);
-        //3.END-------------------
+        {
+            fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, true, false, false, false);
+            PlayerOne.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
 
         //4.START----------
         PlayerOne.GetComponent<player>().updateStamina(PlayerOne.crossStaminaUseHead);
@@ -304,14 +354,17 @@ public class fightManager : MonoBehaviour
         //Träffar slaget
         if (actionCompletedOrNot == true)
         {
+            PlayerTwo.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerOne.GetComponent<player>().updateHeadHealth(PlayerTwo.crossDamageHead);
+            //statisticsGO.GetComponent<fightStatsKnockdownCause>().specialAttackCrossKO(true, PlayerTwo.name);
             //9.1 END----------
 
             //9.1.2 START----------
             knockdownState = Knockdown.willPlayerGetKnockdown(PlayerTwo, PlayerOne, true);
             if (knockdownState == true)
             {
+                PlayerOne.GetComponent<fightStatsKnockdownCause>().specialAttackCrossKO();
                 PlayerOne.fighterStateUpdate(true);
                 fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, false, true, true);
             }
@@ -324,9 +377,15 @@ public class fightManager : MonoBehaviour
             }
         }
         else
+        {
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, true, false, false, false);
-        //3.END-------------------
-        
+            PlayerTwo.fightStatisticsNumberOfFailedActions();        
+        }
+            //3.END-------------------
+
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().updateTextLastActionRound("Cross Head", actionCompletedOrNot);
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().fightUpdateText(true, false);
+
         //4.START----------
         PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaUseHead);
         //4.END----------
@@ -345,6 +404,7 @@ public class fightManager : MonoBehaviour
 
         if (actionCompletedOrNot == true)
         {
+            PlayerOne.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerTwo.GetComponent<player>().updateBodyHealth(PlayerOne.jabDamageBody);
             PlayerTwo.GetComponent<player>().updateStamina(PlayerOne.jabStaminaDamageBody);
@@ -354,8 +414,11 @@ public class fightManager : MonoBehaviour
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, true, true, false);
         }
         else
+        {
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, true, false, false);
-        //3.END-------------------
+            PlayerOne.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
 
         //4.START----------
         PlayerOne.GetComponent<player>().updateStamina(PlayerOne.jabStaminaUseBody);
@@ -374,6 +437,7 @@ public class fightManager : MonoBehaviour
 
         if (actionCompletedOrNot == true)
         {
+            PlayerTwo.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerOne.GetComponent<player>().updateBodyHealth(PlayerTwo.jabDamageBody);
             PlayerOne.GetComponent<player>().updateStamina(PlayerTwo.jabStaminaDamageBody);
@@ -383,9 +447,14 @@ public class fightManager : MonoBehaviour
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, true, true, false);
         }
         else
+        {
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, true, false, false);
-        //3.END-------------------
+            PlayerTwo.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
 
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().updateTextLastActionRound("Jab Body", actionCompletedOrNot);
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().fightUpdateText(false, true);
         //4.START----------
         PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.jabStaminaUseBody);
         //4.END----------
@@ -404,8 +473,10 @@ public class fightManager : MonoBehaviour
         //Träffar slaget
         if (actionCompletedOrNot == true)
         {
+            PlayerOne.fightStatisticsNumberOfSuccededActions();
             //9.1 START----------
             PlayerTwo.GetComponent<player>().updateBodyHealth(PlayerOne.crossDamageBody);
+            PlayerTwo.GetComponent<player>().updateStamina(PlayerOne.crossStaminaDamageBody);
             //9.1 END----------
 
             //9.1.2 START----------Specialattack
@@ -413,7 +484,7 @@ public class fightManager : MonoBehaviour
             //Debug.Log(PlayerOne.reduceOpponentStaminaRecoveryChance);
             if (actionCompletedOrNot == true)
             {
-                PlayerTwo.staminaRecoveryBetweenRounds --;
+                PlayerTwo.staminaRecoveryBetweenRounds--;
                 fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, false, true, true);
                 //9.1.2 END----------
             }
@@ -425,8 +496,11 @@ public class fightManager : MonoBehaviour
 
         }
         else
+        {
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerOne, PlayerTwo, false, false, false, true);
-        //3.END-------------------
+            PlayerOne.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
 
         //4.START----------
         PlayerOne.GetComponent<player>().updateStamina(PlayerOne.crossStaminaUseBody);
@@ -447,15 +521,17 @@ public class fightManager : MonoBehaviour
         //Träffar slaget
         if (actionCompletedOrNot == true)
         {
+            PlayerTwo.fightStatisticsNumberOfSuccededActions();
             //Debug.Log("PlayerTwo BodyCross Hit");
             //9.1 START----------
             PlayerOne.GetComponent<player>().updateBodyHealth(PlayerTwo.crossDamageBody);
+            PlayerOne.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaDamageBody);
             //9.1 END----------
 
             //9.1.2 START----------Specialattack
-            actionCompletedOrNot = SuccedOrNotAction.action(PlayerTwo.reduceOpponentStaminaRecoveryChance, PlayerOne.guardBody, false);
+            actionCompletedOrNotSpecial = SuccedOrNotAction.action(PlayerTwo.reduceOpponentStaminaRecoveryChance, PlayerOne.guardBody, false);
             //Debug.Log(PlayerOne.reduceOpponentStaminaRecoveryChance);
-            if (actionCompletedOrNot == true)
+            if (actionCompletedOrNotSpecial == true)
             {
                 PlayerOne.staminaRecoveryBetweenRounds--;
                 fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, false, true, true);
@@ -468,9 +544,14 @@ public class fightManager : MonoBehaviour
 
         }
         else
+        {
             fightUIScripts.GetComponent<commentatorManager>().startTimer(PlayerTwo, PlayerOne, false, false, false, true);
-        //3.END-------------------
+            PlayerTwo.fightStatisticsNumberOfFailedActions();
+        }
+            //3.END-------------------
 
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().updateTextLastActionRound("Cross Body", actionCompletedOrNot);
+        fightUIScripts.GetComponent<playerTwoActionDisplay>().fightUpdateText(false, false);
         //4.START----------
         PlayerTwo.GetComponent<player>().updateStamina(PlayerTwo.crossStaminaUseBody);
         //4.END----------
@@ -555,6 +636,7 @@ public class fightManager : MonoBehaviour
 
         if (functionName == "playerTwoAction")
         {
+            
             if (PlayerTwo.GetComponent<player>().fightStyleNow == fightStyle.Headhunter)
             {
                 GetComponent<playerTwoAction>().headHunter();
@@ -564,7 +646,11 @@ public class fightManager : MonoBehaviour
             {
                 GetComponent<playerTwoAction>().bodySnatcher();
             }
+            
+            
+            //TEST
 
+            //GetComponent<playerTwoAction>().jabHead();
             //GetComponent<playerTwoAction>().crossHead();
             //GetComponent<playerTwoAction>().randomizedHead();
             //GetComponent<playerTwoAction>().jabBody();
@@ -588,12 +674,21 @@ public class fightManager : MonoBehaviour
         StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdatePlayer * 2, "updatePlayerTwoFunc"));
         disableFighterPanel();
         GetComponent<actionsLeftPlayer>().subActionPoints();
+        PlayerOne.fightStatisticsNumberOfActions();
+        actionPerformedPlayerOne.text = "Action performed: " + PlayerOne.actionsPerformed;
+        actionSuccededPlayerOne.text = "Action succeded: " + PlayerOne.actionsSucceded;
+        actionFailedPlayerOne.text = "Action failed: " + PlayerOne.actionsFailed;
+
     }
 
     public void afterActionChoicePlayerTwo()
     {
         StartCoroutine(waitForSecondsFunc(fightUIScripts.GetComponent<commentatorManager>().waitSecondsBeforeUpdateOpponent * 2, "updatePlayerOneFunc"));
         GetComponent<actionsLeftPlayer>().subActionPoints();
+        PlayerTwo.fightStatisticsNumberOfActions();
+        actionPerformedPlayerTwo.text = "Action performed: " + PlayerTwo.actionsPerformed;
+        actionSuccededPlayerTwo.text = "Action succeded: " + PlayerTwo.actionsSucceded;
+        actionFailedPlayerTwo.text = "Action failed: " + PlayerTwo.actionsFailed;
     }
     //10. END--------------
 
@@ -601,6 +696,7 @@ public class fightManager : MonoBehaviour
     void enableFighterPanel()
     {
         playerTwoFighterPanelGO.active = true;
+
     }
     //11. END---------
 
@@ -614,10 +710,15 @@ public class fightManager : MonoBehaviour
         {
             victoryPanelGO.GetComponent<afterFightUpdate>().updateText(PlayerOne, true);
             rankUpPlayer();
+            statisticsGO.GetComponent<fightStatistics>().addVictory();
         }
         else
+        {
             victoryPanelGO.GetComponent<afterFightUpdate>().updateText(PlayerOne, false);
-
+            statisticsGO.GetComponent<fightStatistics>().addLose();
+        }
+        statisticsGO.GetComponent<fightStatistics>().addKO();
+    
         PlayerOne.resetAfterFight();
     }
 
@@ -631,20 +732,54 @@ public class fightManager : MonoBehaviour
         {
             victoryPanelGO.GetComponent<afterFightUpdate>().decisionUpdate(true);
             rankUpPlayer();
+            statisticsGO.GetComponent<fightStatistics>().addVictory();
         }
         else
+        {
             victoryPanelGO.GetComponent<afterFightUpdate>().decisionUpdate(false);
+            statisticsGO.GetComponent<fightStatistics>().addLose();
+        }
+        statisticsGO.GetComponent<fightStatistics>().addDecision();
 
         PlayerOne.resetAfterFight();
     }
 
     public void rankUpPlayer()
     {
+       
         opponentIndex++;
+        Debug.Log(opponentIndex);
+        Debug.Log(opponentListGO.PlayerList.Count);
+        if (opponentIndex >= opponentListGO.PlayerList.Count)
+        {
+            victoryPanelGO.GetComponent<afterFightUpdate>().updateTextChampion(PlayerOne);
+        }
+        else
+        {
+            fightUIScripts.GetComponent<opponentStatsDisplayPanel>().updateOpponent();
+        }
+        
     }
 
     public void simulatePlayerOneAction()
     {
-        playerOneJabHead();
+        //playerOneJabHead();
+        playerOneCrossHead();
+    }
+
+    public void addStatistics()
+    {
+        GetComponent<roundManager>().addStatisticFightEndedRound();
+    }
+
+    public void updateActionsPerformed()
+    {
+        actionPerformedPlayerOne.text = "Action performed: " + PlayerOne.actionsPerformed;
+        actionSuccededPlayerOne.text = "Action succeded: " + PlayerOne.actionsSucceded;
+        actionFailedPlayerOne.text = "Action failed: " + PlayerOne.actionsFailed;
+
+        actionPerformedPlayerTwo.text = "Action performed: " + PlayerTwo.actionsPerformed;
+        actionSuccededPlayerTwo.text = "Action succeded: " + PlayerTwo.actionsSucceded;
+        actionFailedPlayerTwo.text = "Action failed: " + PlayerTwo.actionsFailed;
     }
 }

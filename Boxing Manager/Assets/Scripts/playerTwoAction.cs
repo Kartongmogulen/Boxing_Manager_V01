@@ -8,68 +8,74 @@ public class playerTwoAction : MonoBehaviour
     public float randomNumb;
     int i;
     public int numberOfActionsAvailable;//Antal aktioner att välja på
+
+    public GameObject UIScriptsGO;
     /// </summary>
     /// 
 
         public void headHunter()
     {
         //Debug.Log("Headhunter action");
+        //randomNumb = 50;
         randomNumb = Random.Range(0, 100);
         //Debug.Log("Random nr: " + randomNumb);
 
         if (randomNumb <= 33)
         {
             GetComponent<fightManager>().playerTwoJabHead();
-            Debug.Log("Jab Head");
+            //UIScriptsGO.GetComponent<playerTwoActionDisplay>().updateText(i, "Jab Head");
+            //Debug.Log("Jab Head");
         }
 
         else if (randomNumb <= 66)
         {
             GetComponent<fightManager>().playerTwoCrossHead();
-            Debug.Log("Cross Head");
+            //Debug.Log("Cross Head");
         }
 
         else if (randomNumb <= 83)
         {
             GetComponent<fightManager>().playerTwoCrossBody();
-            Debug.Log("Cross Body");
+            //Debug.Log("Cross Body");
         }
 
         else
         {
             GetComponent<fightManager>().playerTwoJabBody();
-            Debug.Log("Jab Body");
+            //Debug.Log("Jab Body");
         }
+
+        
     }
 
     public void bodySnatcher()
     {
         //Debug.Log("Headhunter action");
         randomNumb = Random.Range(0, 100);
-        //Debug.Log("Random nr: " + randomNumb);
+        //Debug.Log("Bodysnatcher Random nr: " + randomNumb);
 
-        if (randomNumb <= 33)
+        if (randomNumb <= 35)
         {
             GetComponent<fightManager>().playerTwoJabBody();
-            Debug.Log("Jab Body");
+            //Debug.Log("Jab Body");
         }
 
-        else if (randomNumb <= 66)
+        else if (randomNumb <= 70)
         {
             GetComponent<fightManager>().playerTwoCrossBody();
-            Debug.Log("Cross Head");
+            //Debug.Log("Cross Body");
         }
 
-        else if (randomNumb <= 83)
+        else if (randomNumb <= 85)
         {
             GetComponent<fightManager>().playerTwoCrossHead();
-            Debug.Log("Cross Body");
+            //Debug.Log("Cross Head");
         }
 
         else
         {
             GetComponent<fightManager>().playerTwoJabHead();
-            Debug.Log("Jab Body");
+            //Debug.Log("Jab Head");
         }
     }
 

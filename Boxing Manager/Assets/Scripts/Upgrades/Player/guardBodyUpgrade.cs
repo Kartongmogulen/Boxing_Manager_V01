@@ -20,7 +20,7 @@ public class guardBodyUpgrade : MonoBehaviour
 
     public void sub()
     {
-        if (playerOne.guardBody > 0)
+        if (playerOne.guardBody > 0 && playerOne.guardBody > playerOne.guardBodyStatAfterLastFight)
         {
             playerOne.guardBody--;
             playerOne.expPointsNow++;

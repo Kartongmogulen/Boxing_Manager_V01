@@ -27,7 +27,7 @@ public class healthBodyUpgrade : MonoBehaviour
     }
     public void sub()
     {
-        if (playerOne.playerLvlHealthBody > 0)
+        if (playerOne.playerLvlHealthBody > 0 && playerOne.bodyHealthStart > playerOne.bodyHealthStatAfterLastFight)
         {
             playerOne.playerLvlHealthBody--;
             playerOne.expPointsNow++;

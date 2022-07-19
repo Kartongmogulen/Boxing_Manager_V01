@@ -20,7 +20,7 @@ public class guardHeadUpgrade : MonoBehaviour
 
     public void sub()
     {
-        if (playerOne.guardHead > 0)
+        if (playerOne.guardHead > 0 && playerOne.guardHead > playerOne.guardHeadStatAfterLastFight)
         {
             playerOne.guardHead--;
             playerOne.expPointsNow++;

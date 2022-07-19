@@ -20,7 +20,7 @@ public class accuracyUpgrade : MonoBehaviour
 
     public void subAccuracy()
     {
-        if (playerOne.accuracy > 0)
+        if (playerOne.accuracy > 0 && playerOne.accuracy > playerOne.accuracyStatAfterLastFight)
         {
             playerOne.accuracy--;
             playerOne.expPointsNow++;

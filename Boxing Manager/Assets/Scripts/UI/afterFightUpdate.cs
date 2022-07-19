@@ -9,7 +9,16 @@ public class afterFightUpdate : MonoBehaviour
     public Text VictoryByText;
     public Text XPAwardText;
     public GameObject playerPanelGO;
+    public GameObject nextButton;
 
+
+    public void updateTextChampion(player PlayerOne)
+    {
+        fighterWhoWonText.text = PlayerOne.name + " is now the CHAMPION!";
+        VictoryByText.text = "";
+        XPAwardText.text = "";
+        nextButton.SetActive(false);
+    }
 
    public void updateText(player PlayerOne, bool playerOneWon)
     {
@@ -19,6 +28,7 @@ public class afterFightUpdate : MonoBehaviour
             VictoryByText.text = "Victory by: KO";
             XPAwardText.text = "XP awarded: " + playerPanelGO.GetComponent<fightAwardList>().awardListExperience[0];
             PlayerOne.expPointsNow += playerPanelGO.GetComponent<fightAwardList>().awardListExperience[0];
+
         }
 
         if (playerOneWon == false)

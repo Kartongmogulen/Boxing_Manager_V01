@@ -20,7 +20,7 @@ public class strengthUpgrade : MonoBehaviour
 
     public void subStrength()
     {
-        if (playerOne.strength > 0)
+        if (playerOne.strength > 0 && playerOne.strength > playerOne.strengthStatAfterLastFight)
         {
             playerOne.strength--;
             playerOne.expPointsNow++;

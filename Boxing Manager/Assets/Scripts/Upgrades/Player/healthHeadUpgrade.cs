@@ -29,7 +29,7 @@ public class healthHeadUpgrade : MonoBehaviour
 
     public void sub()
     {
-        if (playerOne.playerLvlHealthHead > 0)
+        if (playerOne.playerLvlHealthHead > 0 && playerOne.headHealthNow > playerOne.headHealthAfterLastFight)
         {
            playerOne.playerLvlHealthHead--;
             playerOne.expPointsNow++;

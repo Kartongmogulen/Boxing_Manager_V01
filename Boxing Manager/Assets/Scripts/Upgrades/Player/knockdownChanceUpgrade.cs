@@ -19,7 +19,7 @@ public class knockdownChanceUpgrade : MonoBehaviour
     }
     public void subStrength()
     {
-        if (playerOne.knockdownChance > 0)
+        if (playerOne.knockdownChance > 0 && playerOne.knockdownChance > playerOne.knockdownChanceStatAfterLastFight)
         {
             playerOne.knockdownChance--;
             playerOne.expPointsNow++;

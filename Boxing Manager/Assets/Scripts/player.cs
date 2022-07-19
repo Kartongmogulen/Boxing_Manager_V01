@@ -7,6 +7,7 @@ public class player : MonoBehaviour
     public fightStyle fightStyleNow;
 
     public GameObject playerPanel;
+    public GameObject fightStatsGO;
 
     public bool Opponent; //Om det är en motståndare eller egna spelaren
 
@@ -20,22 +21,32 @@ public class player : MonoBehaviour
 
     //HEALTH
     public int bodyHealthStart;
+    public int bodyHealthStatAfterLastFight;//Stat efter senaste matchen, går ej att gå lägre än detta.
     public int headHealthStart;
+    public int headHealthAfterLastFight;//Stat efter senaste matchen, går ej att gå lägre än detta.
     public int staminaHealthStart;
+    public int staminaHealthAfterLastFight;//Stat efter senaste matchen, går ej att gå lägre än detta.
     public int staminaRecoveryBetweenRounds;
+    public int staminaRecoveryBetweenRoundsAfterLastFight;//Stat efter senaste matchen, går ej att gå lägre än detta.
 
     //DEFENCE
     public int guardHead;
+    public int guardHeadStatAfterLastFight;//Stat efter senaste matchen, går ej att gå lägre än detta.
     public int guardBody;
+    public int guardBodyStatAfterLastFight;//Stat efter senaste matchen, går ej att gå lägre än detta.
 
     //ATTACK
     public int accuracy; //Chans att träffa
+    public int accuracyStatAfterLastFight; //Stat efter senaste matchen, går ej att gå lägre än detta.
     public int strength; //Skada
+    public int strengthStatAfterLastFight; //Stat efter senaste matchen, går ej att gå lägre än detta.
     public int endurance; //Stamina use
 
     //SPECIAL STATS
     public int knockdownChance; //Högre värde = större chans att knocka motståndaren
+    public int knockdownChanceStatAfterLastFight; //Högre värde = större chans att knocka motståndaren
     public int reduceOpponentStaminaRecoveryChance; //Högre värde = större chans att lyckas
+    public int reduceOpponentStaminaRecoveryChanceStatAfterLastFight; //Högre värde = större chans att lyckas
 
     //Diff mellan Jab och Cross
     public int jabLowerStaminaUse; //Lägre stamina use jämfört med Cross
@@ -73,87 +84,51 @@ public class player : MonoBehaviour
 
     public int expPointsNow;
 
+    //Statistik under match
+    public int actionsPerformed;
+    public int actionsSucceded;
+    public int actionsFailed;
+
+
     public void Awake()
     {
-        if (Opponent == true)
-        {
-            bodyHealthStart = playerPanel.GetComponent<attributeLevelManager>().bodyHealthByLvl[playerLvl];
-            headHealthStart = playerPanel.GetComponent<attributeLevelManager>().headHealthByLvl[playerLvl];
-            staminaHealthStart = playerPanel.GetComponent<attributeLevelManager>().staminaHealthByLvl[playerLvl];
-            startFight();
-        }
         jabLowerStaminaUse = playerPanel.GetComponent<attributeLevelManager>().jabLowerStaminaUse;
         jabCrossDiffDamage = playerPanel.GetComponent<attributeLevelManager>().jabCrossDiffDamage;
 
-        
-        //bodyHealthNow = bodyHealthStart;
+        if (Opponent == true)
+        {
+            bodyHealthStart = playerPanel.GetComponent<attributeLevelManager>().bodyHealthByLvl[playerLvlHealthBody];
+            headHealthStart = playerPanel.GetComponent<attributeLevelManager>().headHealthByLvl[playerLvlHealthHead];
+            staminaHealthStart = playerPanel.GetComponent<attributeLevelManager>().staminaHealthByLvl[playerLvlHealthStamina];
+            startFight();
+        }
+
         bodyHealthNow = playerPanel.GetComponent<attributeLevelManager>().bodyHealthByLvl[playerLvl];
-        
-        //headHealthNow = headHealthStart;
+     
         headHealthNow = playerPanel.GetComponent<attributeLevelManager>().headHealthByLvl[playerLvl];
 
         staminaHealthNow = playerPanel.GetComponent<attributeLevelManager>().staminaHealthByLvl[playerLvl];
         staminaRecoveryBetweenRounds = playerPanel.GetComponent<attributeLevelManager>().staminaHealthRecoveryByLvl[playerLvlHealthStaminaRecovery];
 
-        /*
-        crossDamageHead = strength;
-        crossDamageBody = strength;
-
-        crossKnockDownHead = knockdownChance;
-        crossStaminaRecoveryDamageBody = reduceOpponentStaminaRecoveryChance;
-        //Accuracy
-        jabAccuracyHead = accuracy;
-        crossAccuracyHead = accuracy;
-        jabAccuracyBody = accuracy;
-        crossAccuracyBody = accuracy;
-
-        //Strength
-        if (strength - jabCrossDiffDamage <= 0)
-        {
-            jabDamageHead = 1;
-        }
-        else
-        jabDamageHead = strength - jabCrossDiffDamage;
-
-        if (strength - jabCrossDiffDamage <= 0)
-        {
-            jabDamageBody = 1;
-        }
-        else
-        jabDamageBody = strength - jabCrossDiffDamage;
-
-        //crossDamageHead = strength;
-        //crossDamageBody = strength;
-
-        //Endurance
-        if (endurance - jabLowerStaminaUse <= 0)
-            jabStaminaUseHead = 1;
-        else
-           jabStaminaUseHead = endurance - jabLowerStaminaUse;
-
-        if (endurance - jabLowerStaminaUse <= 0)
-            jabStaminaUseBody = 1;
-        else
-            jabStaminaUseBody = endurance - jabLowerStaminaUse;
-
-        crossStaminaUseHead = endurance;
-        crossStaminaUseBody = endurance;
-        */
-
         //Exp Points
         expPointsNow = expPointsStart;
 
-        //healthPanelTextUpdate.updateOpponentText();
     }
 
     public void startFight()
     {
+        bodyHealthStart = playerPanel.GetComponent<attributeLevelManager>().bodyHealthByLvl[playerLvlHealthBody];
+        headHealthStart = playerPanel.GetComponent<attributeLevelManager>().headHealthByLvl[playerLvlHealthHead];
+        staminaHealthStart = playerPanel.GetComponent<attributeLevelManager>().staminaHealthByLvl[playerLvlHealthStamina];
 
         crossDamageHead = strength;
         crossDamageBody = strength;
 
         crossKnockDownHead = knockdownChance;
         crossStaminaRecoveryDamageBody = reduceOpponentStaminaRecoveryChance;
+        crossStaminaDamageBody = strength;
+        jabStaminaDamageBody = Mathf.RoundToInt(strength / 2);
+
         //Accuracy
         jabAccuracyHead = accuracy;
         crossAccuracyHead = accuracy;
@@ -197,6 +172,7 @@ public class player : MonoBehaviour
     {
         if (knockdown == true){
             fighterStateNow = fighterState.Knockdown;
+           
         }
     }
 
@@ -217,6 +193,7 @@ public class player : MonoBehaviour
         {
             fighterStateUpdate(true);
             bodyHealthNow = bodyHealthStart / 2;
+            GetComponent<fightStatsKnockdownCause>().lowBodyHealth();
         }
     }
 
@@ -228,6 +205,7 @@ public class player : MonoBehaviour
         {
             fighterStateUpdate(true); //Spelaren blir knockad
             staminaHealthNow = staminaHealthStart/2;
+            GetComponent<fightStatsKnockdownCause>().lowStamina();
         }
 
     }
@@ -239,8 +217,19 @@ public class player : MonoBehaviour
 
         if (headHealthNow <= 0)
         {
+            //Debug.Log("updateHeadHealth Zero");
+            //Debug.Log("headHealthStart " + headHealthStart);
             fighterStateUpdate(true);
             headHealthNow = headHealthStart/2;
+            GetComponent<fightStatsKnockdownCause>().lowHeadHealth();
+
+            /*if (Opponent == true)
+            fightStatsGO.GetComponent<fightStatsKnockdownCause>().lowHeadHealth(false);
+            else
+            {
+                fightStatsGO.GetComponent<fightStatsKnockdownCause>().lowHeadHealth(true);
+            }
+            */
         }
     }
 
@@ -262,5 +251,28 @@ public class player : MonoBehaviour
         bodyHealthNow = playerPanel.GetComponent<attributeLevelManager>().bodyHealthByLvl[playerLvlHealthBody];
         staminaHealthNow = playerPanel.GetComponent<attributeLevelManager>().staminaHealthByLvl[playerLvlHealthStamina];
         staminaRecoveryBetweenRounds = playerPanel.GetComponent<attributeLevelManager>().staminaHealthRecoveryByLvl[playerLvlHealthStaminaRecovery];
+        knockdownCounter = 0;
+        actionsPerformed = 0;
+
+        //Statistik
+        actionsPerformed = 0;
+        actionsSucceded = 0;
+        actionsFailed = 0;
+    }
+
+    public void fightStatisticsNumberOfActions()
+    {
+        actionsPerformed++;
+
+    }
+
+    public void fightStatisticsNumberOfSuccededActions()
+    {
+        actionsSucceded++;
+    }
+
+    public void fightStatisticsNumberOfFailedActions()
+    {
+        actionsFailed++;
     }
 }

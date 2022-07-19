@@ -28,7 +28,7 @@ public class staminaMaxUpgrade : MonoBehaviour
 
     public void sub()
     {
-        if (playerOne.playerLvlHealthStamina > 0)
+        if (playerOne.playerLvlHealthStamina > 0 && playerOne.playerLvlHealthStamina > playerOne.staminaHealthAfterLastFight)
         {
             playerOne.playerLvlHealthStamina--;
             playerOne.expPointsNow++;

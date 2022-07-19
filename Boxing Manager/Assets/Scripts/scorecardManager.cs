@@ -125,4 +125,11 @@ public class scorecardManager : MonoBehaviour
         return playerOneWonOnDecision;
     }
 
+    //Nollställer scorecard inför fight
+    public void resetAfterFight()
+    {
+        scoreRoundPlayerOne = new List<int> ();
+        scoreRoundPlayerTwo = new List<int>();
+    }
+
 }
